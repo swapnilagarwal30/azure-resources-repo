@@ -10,17 +10,6 @@ on:
     types:
       - submitted
 
-  workflow_dispatch:
-    inputs:
-      action:
-        description: "Select Terraform action"
-        required: true
-        type: choice
-        options:
-          - plan
-          - apply
-        default: plan
-
 permissions:
   contents: write
   pull-requests: write
@@ -87,7 +76,7 @@ jobs:
         run: terraform plan -input=false
 
       # --------------------------------------------------------
-      # CREATE PR
+      # CREATE PULL REQUEST
       # --------------------------------------------------------
 
       - name: Create Pull Request
@@ -139,17 +128,24 @@ jobs:
 
 
   # ============================================================
-  # PR APPROVAL + MERGE
+  # PR APPROVAL + AUTOMATIC MERGE
   #
-  # Pull Request
+  # Reviewer approves PR
+  #
   #       |
-  #       +--> Reviewer approves
+  #       v
+  #
+  # GitHub Actions detects approval
+  #
   #       |
-  #       +--> GitHub Actions detects approval
+  #       v
+  #
+  # Squash merge into main
+  #
   #       |
-  #       +--> Squash merge into main
-  #       |
-  #       +--> Delete feature branch
+  #       v
+  #
+  # Delete feature branch
   #
   # ============================================================
 
@@ -165,6 +161,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Merge approved PR
         env:
@@ -188,20 +189,20 @@ jobs:
   #
   #       |
   #       v
-  #     main push
+  #
+  # main push
   #
   #       |
-  #       +--> fmt
-  #       +--> init
-  #       +--> validate
-  #       +--> plan
-  #
-  # NO APPLY HERE
+  #       +--> Terraform fmt
+  #       +--> Terraform init
+  #       +--> Terraform validate
+  #       +--> Terraform plan
+  #       +--> Terraform apply
   #
   # ============================================================
 
-  main-plan:
-    name: Main - Terraform Plan
+  main-deploy:
+    name: Main - Terraform Plan and Apply
 
     if: >
       github.event_name == 'push' &&
@@ -214,6 +215,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # --------------------------------------------------------
+      # AZURE LOGIN
+      # --------------------------------------------------------
+
       - name: Azure Login using OIDC
         uses: azure/login@v3
         with:
@@ -221,76 +226,47 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      # --------------------------------------------------------
+      # TERRAFORM SETUP
+      # --------------------------------------------------------
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+
+      # --------------------------------------------------------
+      # TERRAFORM FORMAT
+      # --------------------------------------------------------
 
       - name: Terraform Format Check
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform fmt -check -recursive
 
+      # --------------------------------------------------------
+      # TERRAFORM INIT
+      # --------------------------------------------------------
+
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform init -input=false
+
+      # --------------------------------------------------------
+      # TERRAFORM VALIDATE
+      # --------------------------------------------------------
 
       - name: Terraform Validate
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform validate
 
+      # --------------------------------------------------------
+      # TERRAFORM PLAN
+      # --------------------------------------------------------
+
       - name: Terraform Plan
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform plan -input=false
 
-
-  # ============================================================
-  # MANUAL APPLY
-  #
-  # Actions
-  #   -> Terraform Azure CI/CD
-  #   -> Run workflow
-  #   -> Select branch: main
-  #   -> action = apply
-  #
-  # ============================================================
-
-  manual-apply:
-    name: Manual Terraform Apply
-
-    if: >
-      github.event_name == 'workflow_dispatch' &&
-      github.ref == 'refs/heads/main' &&
-      inputs.action == 'apply'
-
-    runs-on: ubuntu-latest
-
-    steps:
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Azure Login using OIDC
-        uses: azure/login@v3
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform Init
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform init -input=false
-
       # --------------------------------------------------------
-      # FINAL PLAN BEFORE APPLY
-      # --------------------------------------------------------
-
-      - name: Terraform Final Plan
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform plan -input=false
-
-      # --------------------------------------------------------
-      # APPLY
+      # TERRAFORM APPLY
       # --------------------------------------------------------
 
       - name: Terraform Apply
