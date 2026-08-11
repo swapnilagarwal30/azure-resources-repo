@@ -241,6 +241,14 @@ jobs:
       # APPLY
       # --------------------------------------------------------
 
-      - name: Terraform Apply
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform apply -auto-approve -input=false
+      - name: Merge approved pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "PR #${{ github.event.pull_request.number }} has been approved."
+          echo "Merging PR into main..."
+
+          gh pr merge \
+            "${{ github.event.pull_request.number }}" \
+            --squash \
+            --delete-branch
