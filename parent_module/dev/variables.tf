@@ -1,7 +1,7 @@
 variable "rgvar" {}
 variable "vnetvar" {}
 variable "subnetvar" {}
-variable "pipvar" {}
+# variable "pipvar" {}
 variable "nicvar" {}
 variable "linuxvm_var" {}
 variable "nsgvar" {}
