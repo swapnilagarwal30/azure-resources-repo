@@ -33,26 +33,26 @@ subnetvar = {
     address_prefixes = ["10.0.5.0/24"]
   }
 }
-pipvar = {
-  pip1 = {
-    pip_name  = "frontend-pip"
-    rg_name   = "rg-developed"
-    location  = "japanwest"
-    pip_alloc = "Static"
-  }
-  pip2 = {
-    pip_name  = "backend-pip"
-    rg_name   = "rg-developed"
-    location  = "japanwest"
-    pip_alloc = "Static"
-  }
-  pip3 = {
-    pip_name  = "bastion-pip"
-    rg_name   = "rg-developed"
-    location  = "japanwest"
-    pip_alloc = "Static"
-  }
-}
+# pipvar = {
+#   pip1 = {
+#     pip_name  = "frontend-pip"
+#     rg_name   = "rg-developed"
+#     location  = "japanwest"
+#     pip_alloc = "Static"
+#   }
+#   pip2 = {
+#     pip_name  = "backend-pip"
+#     rg_name   = "rg-developed"
+#     location  = "japanwest"
+#     pip_alloc = "Static"
+#   }
+#   pip3 = {
+#     pip_name  = "bastion-pip"
+#     rg_name   = "rg-developed"
+#     location  = "japanwest"
+#     pip_alloc = "Static"
+#   }
+# }
 nicvar = {
   nic1 = {
     nic_name    = "frontend-nic"

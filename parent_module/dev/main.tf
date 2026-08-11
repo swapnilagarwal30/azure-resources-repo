@@ -12,11 +12,11 @@ module "azurerm_subnet" {
   source     = "../../child_modules/azurerm_subnet"
   subnetvar  = var.subnetvar
 }
-module "azurerm_public_ip" {
-  depends_on = [module.azurerm_subnet]
-  source     = "../../child_modules/azurerm_public_ip"
-  pipvar     = var.pipvar
-}
+# module "azurerm_public_ip" {
+#   depends_on = [module.azurerm_subnet]
+#   source     = "../../child_modules/azurerm_public_ip"
+#   pipvar     = var.pipvar
+# }
 module "azurerm_network_interface" {
   depends_on = [module.azurerm_subnet, module.azurerm_public_ip]
   source     = "../../child_modules/azurerm_network_interface"
