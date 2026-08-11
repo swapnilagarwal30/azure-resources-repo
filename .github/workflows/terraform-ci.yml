@@ -1,10 +1,9 @@
-name: Terraform Azure CI/CD
+name: Terraform CI
 
 on:
   push:
     branches:
       - "feature/**"
-      - "main"
 
   pull_request_review:
     types:
@@ -46,171 +45,9 @@ jobs:
 
     steps:
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Azure Login using OIDC
-        uses: azure/login@v3
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform Format Check
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform fmt -check -recursive
-
-      - name: Terraform Init
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform init -input=false
-
-      - name: Terraform Validate
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform validate
-
-      - name: Terraform Plan
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform plan -input=false
-
       # --------------------------------------------------------
-      # CREATE PULL REQUEST
+      # CHECKOUT
       # --------------------------------------------------------
-
-      - name: Create Pull Request
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-
-          BRANCH_NAME="${GITHUB_REF_NAME}"
-
-          EXISTING_PR=$(gh pr list \
-            --head "$BRANCH_NAME" \
-            --base main \
-            --state open \
-            --json number \
-            --jq '.[0].number')
-
-          if [ -n "$EXISTING_PR" ]; then
-
-            echo "Pull Request #$EXISTING_PR already exists."
-
-          else
-
-            echo "Creating Pull Request..."
-
-            gh pr create \
-              --base main \
-              --head "$BRANCH_NAME" \
-              --title "Terraform: ${BRANCH_NAME} -> main" \
-              --body "## Terraform Infrastructure Change
-
-          This Pull Request was automatically created by GitHub Actions.
-
-          ### Terraform Checks
-
-          - terraform fmt
-          - terraform init
-          - terraform validate
-          - terraform plan
-
-          ### Source Branch
-
-          ${BRANCH_NAME}
-
-          ### Target Branch
-
-          main"
-
-          fi
-
-
-  # ============================================================
-  # PR APPROVAL + AUTOMATIC MERGE
-  #
-  # Reviewer approves PR
-  #
-  #       |
-  #       v
-  #
-  # GitHub Actions detects approval
-  #
-  #       |
-  #       v
-  #
-  # Squash merge into main
-  #
-  #       |
-  #       v
-  #
-  # Delete feature branch
-  #
-  # ============================================================
-
-  merge-approved-pr:
-    name: Merge Approved PR
-
-    if: >
-      github.event_name == 'pull_request_review' &&
-      github.event.action == 'submitted' &&
-      github.event.review.state == 'approved' &&
-      github.event.pull_request.base.ref == 'main'
-
-    runs-on: ubuntu-latest
-
-    steps:
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Merge approved PR
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-
-          echo "PR #${PR_NUMBER} has been approved."
-          echo "Merging PR into main..."
-
-          gh pr merge "${PR_NUMBER}" \
-            --squash \
-            --delete-branch
-
-
-  # ============================================================
-  # MAIN BRANCH
-  #
-  # PR approved + merged
-  #
-  #       |
-  #       v
-  #
-  # main push
-  #
-  #       |
-  #       +--> Terraform fmt
-  #       +--> Terraform init
-  #       +--> Terraform validate
-  #       +--> Terraform plan
-  #       +--> Terraform apply
-  #
-  # ============================================================
-
-  main-deploy:
-    name: Main - Terraform Plan and Apply
-
-    if: >
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
-
-    runs-on: ubuntu-latest
-
-    steps:
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -266,9 +103,106 @@ jobs:
         run: terraform plan -input=false
 
       # --------------------------------------------------------
-      # TERRAFORM APPLY
+      # CREATE PULL REQUEST
       # --------------------------------------------------------
 
-      - name: Terraform Apply
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform apply -auto-approve -input=false
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BRANCH_NAME="${GITHUB_REF_NAME}"
+
+          EXISTING_PR=$(gh pr list \
+            --head "$BRANCH_NAME" \
+            --base main \
+            --state open \
+            --json number \
+            --jq '.[0].number')
+
+          if [ -n "$EXISTING_PR" ]; then
+            echo "Pull Request #$EXISTING_PR already exists."
+          else
+            echo "Creating Pull Request..."
+
+            gh pr create \
+              --base main \
+              --head "$BRANCH_NAME" \
+              --title "Terraform: ${BRANCH_NAME} -> main" \
+              --body "## Terraform Infrastructure Change\n\nThis Pull Request was automatically created by GitHub Actions.\n\n### Terraform Checks\n\n- terraform fmt\n- terraform init\n- terraform validate\n- terraform plan\n\n### Source Branch\n\n${BRANCH_NAME}\n\n### Target Branch\n\nmain"
+          fi
+
+
+  # ============================================================
+  # APPROVED PR
+  #
+  # Reviewer approves PR
+  #
+  #   |
+  #   v
+  #
+  # Automatically squash merge into main
+  #
+  #   |
+  #   v
+  #
+  # Trigger Terraform CD
+  #
+  # ============================================================
+
+  merge-approved-pr:
+    name: Merge Approved PR
+
+    if: >
+      github.event_name == 'pull_request_review' &&
+      github.event.action == 'submitted' &&
+      github.event.review.state == 'approved' &&
+      github.event.pull_request.base.ref == 'main'
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # --------------------------------------------------------
+      # CHECKOUT
+      # --------------------------------------------------------
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # --------------------------------------------------------
+      # MERGE APPROVED PR
+      # --------------------------------------------------------
+
+      - name: Merge Approved PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+
+          echo "PR #${PR_NUMBER} has been approved."
+          echo "Merging PR into main..."
+
+          gh pr merge "${PR_NUMBER}" \
+            --squash \
+            --delete-branch
+
+      # --------------------------------------------------------
+      # TRIGGER TERRAFORM CD
+      #
+      # workflow_dispatch is used because a push generated by
+      # GITHUB_TOKEN does not trigger another workflow.
+      #
+      # --------------------------------------------------------
+
+      - name: Trigger Terraform CD
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Triggering Terraform CD workflow..."
+
+          gh workflow run terraform-cd.yml \
+            --ref main
+
+          echo "Terraform CD workflow triggered successfully."

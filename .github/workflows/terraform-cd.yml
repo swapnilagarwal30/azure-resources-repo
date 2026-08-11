@@ -1,0 +1,102 @@
+name: Terraform CD
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TF_WORKING_DIR: parent_module/dev
+
+jobs:
+
+  # ============================================================
+  # MAIN BRANCH DEPLOYMENT
+  #
+  # Triggered automatically by terraform-ci.yml
+  #
+  #   |
+  #   +--> Checkout main
+  #   +--> Terraform fmt
+  #   +--> Terraform init
+  #   +--> Terraform validate
+  #   +--> Terraform plan
+  #   +--> Terraform apply
+  #
+  # ============================================================
+
+  terraform-deploy:
+    name: Main - Terraform Plan and Apply
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # --------------------------------------------------------
+      # CHECKOUT MAIN
+      # --------------------------------------------------------
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      # --------------------------------------------------------
+      # AZURE LOGIN
+      # --------------------------------------------------------
+
+      - name: Azure Login using OIDC
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # --------------------------------------------------------
+      # TERRAFORM SETUP
+      # --------------------------------------------------------
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # --------------------------------------------------------
+      # TERRAFORM FORMAT
+      # --------------------------------------------------------
+
+      - name: Terraform Format Check
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform fmt -check -recursive
+
+      # --------------------------------------------------------
+      # TERRAFORM INIT
+      # --------------------------------------------------------
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -input=false
+
+      # --------------------------------------------------------
+      # TERRAFORM VALIDATE
+      # --------------------------------------------------------
+
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform validate
+
+      # --------------------------------------------------------
+      # TERRAFORM PLAN
+      # --------------------------------------------------------
+
+      - name: Terraform Plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform plan -input=false
+
+      # --------------------------------------------------------
+      # TERRAFORM APPLY
+      # --------------------------------------------------------
+
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform apply -auto-approve -input=false
