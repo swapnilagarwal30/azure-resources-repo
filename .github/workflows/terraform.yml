@@ -1,0 +1,246 @@
+name: Terraform Azure CI/CD
+
+on:
+  push:
+    branches:
+      - "feature/**"
+      - "main"
+
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Select Terraform action"
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+        default: plan
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+env:
+  TF_WORKING_DIR: parent_module/dev
+
+jobs:
+
+  # ============================================================
+  # FEATURE BRANCH
+  #
+  # feature/* push
+  #       |
+  #       +--> Terraform fmt
+  #       +--> Terraform init
+  #       +--> Terraform validate
+  #       +--> Terraform plan
+  #       |
+  #       +--> Create PR to main
+  # ============================================================
+
+  feature-plan:
+    name: Feature - Terraform Plan
+
+    if: |
+      github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/heads/feature/')
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login using OIDC
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Format Check
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform plan -input=false
+
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+
+          BRANCH_NAME="${GITHUB_REF_NAME}"
+
+          EXISTING_PR=$(gh pr list \
+            --head "$BRANCH_NAME" \
+            --base main \
+            --state open \
+            --json number \
+            --jq '.[0].number')
+
+          if [ -n "$EXISTING_PR" ]; then
+
+            echo "Pull Request #$EXISTING_PR already exists."
+
+          else
+
+            echo "Creating Pull Request..."
+
+            gh pr create \
+              --base main \
+              --head "$BRANCH_NAME" \
+              --title "Terraform: ${BRANCH_NAME} -> main" \
+              --body "## Terraform Infrastructure Change
+
+              This Pull Request was automatically created by GitHub Actions.
+
+              ### Terraform Checks
+
+              - terraform fmt
+              - terraform init
+              - terraform validate
+              - terraform plan
+
+              ### Source Branch
+
+              ${BRANCH_NAME}
+
+              ### Target Branch
+
+              main"
+
+          fi
+
+
+  # ============================================================
+  # MAIN BRANCH
+  #
+  # PR APPROVED + MERGED
+  #       |
+  #       v
+  # main push
+  #       |
+  #       +--> fmt
+  #       +--> init
+  #       +--> validate
+  #       +--> plan
+  #
+  # NO APPLY HERE
+  # ============================================================
+
+  main-plan:
+    name: Main - Terraform Plan
+
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login using OIDC
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Format Check
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform plan -input=false
+
+
+  # ============================================================
+  # MANUAL APPLY
+  #
+  # No GitHub Environment required.
+  #
+  # User manually starts workflow from:
+  #
+  # Actions
+  #   -> Terraform Azure CI/CD
+  #   -> Run workflow
+  #   -> action = apply
+  #
+  # This job runs only on MAIN.
+  # ============================================================
+
+  manual-apply:
+    name: Manual Terraform Apply
+
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.action == 'apply'
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login using OIDC
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -input=false
+
+      # --------------------------------------------------------
+      # FINAL PLAN BEFORE APPLY
+      # --------------------------------------------------------
+
+      - name: Terraform Final Plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform plan -input=false
+
+      # --------------------------------------------------------
+      # APPLY
+      # --------------------------------------------------------
+
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform apply -auto-approve -input=false
