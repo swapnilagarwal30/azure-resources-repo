@@ -1,0 +1,1 @@
+variable "linuxvm_var" {}
