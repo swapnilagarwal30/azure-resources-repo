@@ -10,6 +10,7 @@ on:
       - submitted
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
   id-token: write
@@ -198,7 +199,7 @@ jobs:
 
       - name: Trigger Terraform CD
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GH_ACTIONS_TOKEN }}
         run: |
           echo "Triggering Terraform CD workflow..."
 
