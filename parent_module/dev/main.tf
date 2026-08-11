@@ -18,7 +18,7 @@ module "azurerm_subnet" {
 #   pipvar     = var.pipvar
 # }
 module "azurerm_network_interface" {
-  depends_on = [module.azurerm_subnet, module.azurerm_public_ip]
+  depends_on = [module.azurerm_subnet]
   source     = "../../child_modules/azurerm_network_interface"
   nicvar     = var.nicvar
 }
