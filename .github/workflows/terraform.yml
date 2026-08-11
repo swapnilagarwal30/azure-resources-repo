@@ -6,6 +6,10 @@ on:
       - "feature/**"
       - "main"
 
+  pull_request_review:
+    types:
+      - submitted
+
   workflow_dispatch:
     inputs:
       action:
@@ -31,19 +35,21 @@ jobs:
   # FEATURE BRANCH
   #
   # feature/* push
-  #       |
-  #       +--> Terraform fmt
-  #       +--> Terraform init
-  #       +--> Terraform validate
-  #       +--> Terraform plan
-  #       |
-  #       +--> Create PR to main
+  #
+  #   |
+  #   +--> Terraform fmt
+  #   +--> Terraform init
+  #   +--> Terraform validate
+  #   +--> Terraform plan
+  #   |
+  #   +--> Create PR to main
+  #
   # ============================================================
 
   feature-plan:
     name: Feature - Terraform Plan
 
-    if: |
+    if: >
       github.event_name == 'push' &&
       startsWith(github.ref, 'refs/heads/feature/')
 
@@ -80,6 +86,10 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform plan -input=false
 
+      # --------------------------------------------------------
+      # CREATE PR
+      # --------------------------------------------------------
+
       - name: Create Pull Request
         env:
           GH_TOKEN: ${{ github.token }}
@@ -108,33 +118,78 @@ jobs:
               --title "Terraform: ${BRANCH_NAME} -> main" \
               --body "## Terraform Infrastructure Change
 
-              This Pull Request was automatically created by GitHub Actions.
+          This Pull Request was automatically created by GitHub Actions.
 
-              ### Terraform Checks
+          ### Terraform Checks
 
-              - terraform fmt
-              - terraform init
-              - terraform validate
-              - terraform plan
+          - terraform fmt
+          - terraform init
+          - terraform validate
+          - terraform plan
 
-              ### Source Branch
+          ### Source Branch
 
-              ${BRANCH_NAME}
+          ${BRANCH_NAME}
 
-              ### Target Branch
+          ### Target Branch
 
-              main"
+          main"
 
           fi
 
 
   # ============================================================
+  # PR APPROVAL + MERGE
+  #
+  # Pull Request
+  #       |
+  #       +--> Reviewer approves
+  #       |
+  #       +--> GitHub Actions detects approval
+  #       |
+  #       +--> Squash merge into main
+  #       |
+  #       +--> Delete feature branch
+  #
+  # ============================================================
+
+  merge-approved-pr:
+    name: Merge Approved PR
+
+    if: >
+      github.event_name == 'pull_request_review' &&
+      github.event.action == 'submitted' &&
+      github.event.review.state == 'approved' &&
+      github.event.pull_request.base.ref == 'main'
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Merge approved PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+
+          echo "PR #${PR_NUMBER} has been approved."
+          echo "Merging PR into main..."
+
+          gh pr merge "${PR_NUMBER}" \
+            --squash \
+            --delete-branch
+
+
+  # ============================================================
   # MAIN BRANCH
   #
-  # PR APPROVED + MERGED
+  # PR approved + merged
+  #
   #       |
   #       v
-  # main push
+  #     main push
+  #
   #       |
   #       +--> fmt
   #       +--> init
@@ -142,12 +197,13 @@ jobs:
   #       +--> plan
   #
   # NO APPLY HERE
+  #
   # ============================================================
 
   main-plan:
     name: Main - Terraform Plan
 
-    if: |
+    if: >
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main'
 
@@ -188,22 +244,18 @@ jobs:
   # ============================================================
   # MANUAL APPLY
   #
-  # No GitHub Environment required.
-  #
-  # User manually starts workflow from:
-  #
   # Actions
   #   -> Terraform Azure CI/CD
   #   -> Run workflow
+  #   -> Select branch: main
   #   -> action = apply
   #
-  # This job runs only on MAIN.
   # ============================================================
 
   manual-apply:
     name: Manual Terraform Apply
 
-    if: |
+    if: >
       github.event_name == 'workflow_dispatch' &&
       github.ref == 'refs/heads/main' &&
       inputs.action == 'apply'
@@ -241,14 +293,6 @@ jobs:
       # APPLY
       # --------------------------------------------------------
 
-      - name: Merge approved pull request
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "PR #${{ github.event.pull_request.number }} has been approved."
-          echo "Merging PR into main..."
-
-          gh pr merge \
-            "${{ github.event.pull_request.number }}" \
-            --squash \
-            --delete-branch
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform apply -auto-approve -input=false
