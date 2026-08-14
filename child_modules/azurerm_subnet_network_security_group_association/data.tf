@@ -5,7 +5,7 @@ data "azurerm_subnet" "data_subnetblock" {
   resource_group_name  = each.value.rg_name
 }
 data "azurerm_network_security_group" "data_nsgblock" {
-    for_each             = var.subansgvar
+  for_each            = var.subansgvar
   name                = each.value.nsg_name
   resource_group_name = each.value.nsg_rgn
 }

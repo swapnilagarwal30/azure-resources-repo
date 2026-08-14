@@ -6,7 +6,7 @@ resource "azurerm_network_interface" "nicblock" {
   ip_configuration {
     name                          = "internal"
     subnet_id                     = data.azurerm_subnet.data_subnetblock[each.key].id
-    public_ip_address_id          = data.azurerm_public_ip.data_pipblock[each.key].id
+    public_ip_address_id          = lookup(data.azurerm_public_ip.data_pipblock, each.key, null) != null ? data.azurerm_public_ip.data_pipblock[each.key].id : null
     private_ip_address_allocation = "Dynamic"
   }
 }
