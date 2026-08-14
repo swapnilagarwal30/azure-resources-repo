@@ -124,6 +124,10 @@ jobs:
             gh pr edit "$EXISTING_PR" \
               --repo "${{ github.repository }}" \
               --add-reviewer "satishmali100"
+            echo "Requesting review from prakash-vcare..."
+
+            gh pr edit "$EXISTING_PR" \
+              --add-reviewer "prakash-vcare"
 
             echo "Review requested successfully."
 
@@ -155,6 +159,7 @@ jobs:
           ### Required Reviewer
 
           @satishmali100
+          @prakash-vcare
           EOF
           )
 
@@ -180,6 +185,10 @@ jobs:
             gh pr edit "$PR_NUMBER" \
               --repo "${{ github.repository }}" \
               --add-reviewer "satishmali100"
+            echo "Requesting review from prakash-vcare..."
+
+            gh pr edit "$PR_NUMBER" \
+              --add-reviewer "prakash-vcare"
 
             echo "Review requested successfully."
 
@@ -199,6 +208,7 @@ jobs:
       github.event.review.state == 'approved' &&
       github.event.review.user.login == 'satishmali100' &&
       github.event.pull_request.base.ref == 'main'
+    if: github.event_name == 'pull_request_review' && github.event.action == 'submitted' && github.event.review.state == 'approved' && github.event.review.user.login == 'prakash-vcare' && github.event.pull_request.base.ref == 'main'
 
     runs-on: ubuntu-latest
 
@@ -231,6 +241,8 @@ jobs:
 
           if [ "${{ github.event.review.user.login }}" != "satishmali100" ]; then
             echo "ERROR: Pull Request was not approved by satishmali100."
+          if [ "${{ github.event.review.user.login }}" != "prakash-vcare" ]; then
+            echo "ERROR: Pull Request was not approved by prakash-vcare."
             exit 1
           fi
 
@@ -240,6 +252,7 @@ jobs:
           fi
 
           echo "Pull Request approved by satishmali100."
+          echo "Pull Request approved by prakash-vcare."
 
 
       # --------------------------------------------------------
@@ -260,6 +273,7 @@ jobs:
           echo "Repository: ${{ github.repository }}"
           echo "PR #${PR_NUMBER}"
           echo "Approved by: satishmali100"
+          echo "PR #${PR_NUMBER} was approved by prakash-vcare."
 
           gh pr merge "$PR_NUMBER" \
             --repo "${{ github.repository }}" \
@@ -326,6 +340,7 @@ jobs:
 
           gh workflow run terraform-cd.yml \
             --repo "${{ github.repository }}" \
+            --repo prakash-vcare/azure-resources-repo \
             --ref main
 
           echo "Terraform CD workflow triggered successfully."
