@@ -199,88 +199,88 @@ jobs:
   # APPROVED PR - MERGE AND TRIGGER CD
   # ============================================================
 
-  # merge-approved-pr:
-  #   name: Merge Approved PR
+  merge-approved-pr:
+    name: Merge Approved PR
 
-  #   if: >
-  #     github.event_name == 'pull_request_review' &&
-  #     github.event.action == 'submitted' &&
-  #     github.event.review.state == 'approved' &&
-  #     github.event.review.user.login == 'satishmali100' &&
-  #     github.event.pull_request.base.ref == 'main'
-  #   if: github.event_name == 'pull_request_review' && github.event.action == 'submitted' && github.event.review.state == 'approved' && github.event.review.user.login == 'prakash-vcare' && github.event.pull_request.base.ref == 'main'
+    if: >
+      github.event_name == 'pull_request_review' &&
+      github.event.action == 'submitted' &&
+      github.event.review.state == 'approved' &&
+      github.event.review.user.login == 'satishmali100' &&
+      github.event.pull_request.base.ref == 'main'
+    if: github.event_name == 'pull_request_review' && github.event.action == 'submitted' && github.event.review.state == 'approved' && github.event.review.user.login == 'prakash-vcare' && github.event.pull_request.base.ref == 'main'
 
-  #   runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
 
-    # steps:
+    steps:
 
-    #   # --------------------------------------------------------
-    #   # CHECKOUT
-    #   # --------------------------------------------------------
+      # --------------------------------------------------------
+      # CHECKOUT
+      # --------------------------------------------------------
 
-    #   - name: Checkout repository
-    #     uses: actions/checkout@v4
-    #     with:
-    #       fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
     #   # --------------------------------------------------------
     #   # VERIFY REVIEWER
     #   # --------------------------------------------------------
 
-    #   - name: Verify Reviewer Approval
-    #     run: |
+      - name: Verify Reviewer Approval
+        run: |
 
-    #       echo "=========================================="
-    #       echo "Pull Request Approval"
-    #       echo "=========================================="
+          echo "=========================================="
+          echo "Pull Request Approval"
+          echo "=========================================="
 
-    #       echo "Repository: ${{ github.repository }}"
-    #       echo "Pull Request: #${{ github.event.pull_request.number }}"
-    #       echo "Reviewer: ${{ github.event.review.user.login }}"
-    #       echo "Review State: ${{ github.event.review.state }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Pull Request: #${{ github.event.pull_request.number }}"
+          echo "Reviewer: ${{ github.event.review.user.login }}"
+          echo "Review State: ${{ github.event.review.state }}"
 
-    #       if [ "${{ github.event.review.user.login }}" != "satishmali100" ]; then
-    #         echo "ERROR: Pull Request was not approved by satishmali100."
-    #       if [ "${{ github.event.review.user.login }}" != "prakash-vcare" ]; then
-    #         echo "ERROR: Pull Request was not approved by prakash-vcare."
-    #         exit 1
-    #       fi
+          if [ "${{ github.event.review.user.login }}" != "satishmali100" ]; then
+            echo "ERROR: Pull Request was not approved by satishmali100."
+          if [ "${{ github.event.review.user.login }}" != "prakash-vcare" ]; then
+            echo "ERROR: Pull Request was not approved by prakash-vcare."
+            exit 1
+          fi
 
-    #       if [ "${{ github.event.review.state }}" != "approved" ]; then
-    #         echo "ERROR: Pull Request is not approved."
-    #         exit 1
-    #       fi
+          if [ "${{ github.event.review.state }}" != "approved" ]; then
+            echo "ERROR: Pull Request is not approved."
+            exit 1
+          fi
 
-    #       echo "Pull Request approved by satishmali100."
-    #       echo "Pull Request approved by prakash-vcare."
+          echo "Pull Request approved by satishmali100."
+          echo "Pull Request approved by prakash-vcare."
 
 
       # --------------------------------------------------------
       # MERGE APPROVED PR
       # --------------------------------------------------------
 
-      # - name: Merge Approved PR
-      #   env:
-      #     GH_TOKEN: ${{ secrets.GH_PAT }}
-      #   run: |
+      - name: Merge Approved PR
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
 
-      #     PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
 
-      #     echo "=========================================="
-      #     echo "Merging Pull Request"
-      #     echo "=========================================="
+          echo "=========================================="
+          echo "Merging Pull Request"
+          echo "=========================================="
 
-      #     echo "Repository: ${{ github.repository }}"
-      #     echo "PR #${PR_NUMBER}"
-      #     echo "Approved by: satishmali100"
-      #     echo "PR #${PR_NUMBER} was approved by prakash-vcare."
+          echo "Repository: ${{ github.repository }}"
+          echo "PR #${PR_NUMBER}"
+          echo "Approved by: satishmali100"
+          echo "PR #${PR_NUMBER} was approved by prakash-vcare."
 
-      #     gh pr merge "$PR_NUMBER" \
-      #       --repo "${{ github.repository }}" \
-      #       --squash \
-      #       --delete-branch
+          gh pr merge "$PR_NUMBER" \
+            --repo "${{ github.repository }}" \
+            --squash \
+            --delete-branch
 
-      #     echo "Pull Request merged successfully."
+          echo "Pull Request merged successfully."
 
 
       # --------------------------------------------------------
