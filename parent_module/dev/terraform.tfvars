@@ -26,12 +26,12 @@ subnetvar = {
     vnet_name        = "vnet-dev"
     address_prefixes = ["10.0.2.0/24"]
   }
-  subnet3 = {
-    subnet_name      = "AzureBastionSubnet"
-    rg_name          = "rg-developed"
-    vnet_name        = "vnet-dev"
-    address_prefixes = ["10.0.5.0/24"]
-  }
+  # subnet3 = {
+  #   subnet_name      = "AzureBastionSubnet"
+  #   rg_name          = "rg-developed"
+  #   vnet_name        = "vnet-dev"
+  #   address_prefixes = ["10.0.5.0/24"]
+  # }
 }
 # pipvar = {
 #   pip1 = {
