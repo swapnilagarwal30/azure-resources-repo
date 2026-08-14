@@ -264,7 +264,7 @@ jobs:
           echo "=========================================="
 
           gh workflow run terraform-cd.yml \
-            --repo prakash-vcare/azure-resources-repo \
+            --repo swapnilagarwal30/azure-resources-repo \
             --ref main
 
           echo "Terraform CD workflow triggered successfully."
