@@ -27,7 +27,9 @@ jobs:
   feature-plan:
     name: Feature - Terraform Plan
 
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/feature/')
+    if: >
+      github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/heads/feature/')
 
     runs-on: ubuntu-latest
 
@@ -98,6 +100,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
+
           BRANCH_NAME="${GITHUB_REF_NAME}"
 
           echo "=========================================="
@@ -105,6 +108,7 @@ jobs:
           echo "=========================================="
 
           EXISTING_PR=$(gh pr list \
+            --repo "${{ github.repository }}" \
             --head "$BRANCH_NAME" \
             --base main \
             --state open \
@@ -115,10 +119,11 @@ jobs:
 
             echo "Pull Request #${EXISTING_PR} already exists."
 
-            echo "Requesting review from prakash-vcare..."
+            echo "Requesting review from satishmali100..."
 
             gh pr edit "$EXISTING_PR" \
-              --add-reviewer "prakash-vcare"
+              --repo "${{ github.repository }}" \
+              --add-reviewer "satishmali100"
 
             echo "Review requested successfully."
 
@@ -127,7 +132,7 @@ jobs:
             echo "No existing Pull Request found."
             echo "Creating Pull Request..."
 
-            PR_BODY=$(cat <<'EOF'
+            PR_BODY=$(cat <<EOF
           ## Terraform Infrastructure Change
 
           This Pull Request was automatically created by GitHub Actions.
@@ -149,11 +154,12 @@ jobs:
 
           ### Required Reviewer
 
-          @prakash-vcare
+          @satishmali100
           EOF
           )
 
             PR_URL=$(gh pr create \
+              --repo "${{ github.repository }}" \
               --base main \
               --head "$BRANCH_NAME" \
               --title "Terraform: ${BRANCH_NAME} -> main" \
@@ -163,15 +169,17 @@ jobs:
             echo "$PR_URL"
 
             PR_NUMBER=$(gh pr view "$PR_URL" \
+              --repo "${{ github.repository }}" \
               --json number \
               --jq '.number')
 
             echo "Pull Request Number: ${PR_NUMBER}"
 
-            echo "Requesting review from prakash-vcare..."
+            echo "Requesting review from satishmali100..."
 
             gh pr edit "$PR_NUMBER" \
-              --add-reviewer "prakash-vcare"
+              --repo "${{ github.repository }}" \
+              --add-reviewer "satishmali100"
 
             echo "Review requested successfully."
 
@@ -185,7 +193,12 @@ jobs:
   merge-approved-pr:
     name: Merge Approved PR
 
-    if: github.event_name == 'pull_request_review' && github.event.action == 'submitted' && github.event.review.state == 'approved' && github.event.review.user.login == 'prakash-vcare' && github.event.pull_request.base.ref == 'main'
+    if: >
+      github.event_name == 'pull_request_review' &&
+      github.event.action == 'submitted' &&
+      github.event.review.state == 'approved' &&
+      github.event.review.user.login == 'satishmali100' &&
+      github.event.pull_request.base.ref == 'main'
 
     runs-on: ubuntu-latest
 
@@ -206,16 +219,18 @@ jobs:
 
       - name: Verify Reviewer Approval
         run: |
+
           echo "=========================================="
           echo "Pull Request Approval"
           echo "=========================================="
 
+          echo "Repository: ${{ github.repository }}"
           echo "Pull Request: #${{ github.event.pull_request.number }}"
           echo "Reviewer: ${{ github.event.review.user.login }}"
           echo "Review State: ${{ github.event.review.state }}"
 
-          if [ "${{ github.event.review.user.login }}" != "prakash-vcare" ]; then
-            echo "ERROR: Pull Request was not approved by prakash-vcare."
+          if [ "${{ github.event.review.user.login }}" != "satishmali100" ]; then
+            echo "ERROR: Pull Request was not approved by satishmali100."
             exit 1
           fi
 
@@ -224,7 +239,7 @@ jobs:
             exit 1
           fi
 
-          echo "Pull Request approved by prakash-vcare."
+          echo "Pull Request approved by satishmali100."
 
 
       # --------------------------------------------------------
@@ -235,13 +250,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
+
           PR_NUMBER="${{ github.event.pull_request.number }}"
 
           echo "=========================================="
           echo "Merging Pull Request"
           echo "=========================================="
 
-          echo "PR #${PR_NUMBER} was approved by prakash-vcare."
+          echo "Repository: ${{ github.repository }}"
+          echo "PR #${PR_NUMBER}"
+          echo "Approved by: satishmali100"
 
           gh pr merge "$PR_NUMBER" \
             --repo "${{ github.repository }}" \
@@ -252,6 +270,44 @@ jobs:
 
 
       # --------------------------------------------------------
+      # WAIT FOR MERGE TO COMPLETE
+      # --------------------------------------------------------
+
+      - name: Verify PR Merge
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+
+          echo "=========================================="
+          echo "Verifying PR Merge"
+          echo "=========================================="
+
+          for i in {1..10}; do
+
+            MERGED=$(gh pr view "$PR_NUMBER" \
+              --repo "${{ github.repository }}" \
+              --json merged \
+              --jq '.merged')
+
+            if [ "$MERGED" = "true" ]; then
+              echo "PR #${PR_NUMBER} has been merged."
+              break
+            fi
+
+            echo "Waiting for PR merge..."
+            sleep 5
+
+          done
+
+          if [ "$MERGED" != "true" ]; then
+            echo "ERROR: PR was not merged successfully."
+            exit 1
+          fi
+
+
+      # --------------------------------------------------------
       # TRIGGER TERRAFORM CD
       # --------------------------------------------------------
 
@@ -259,12 +315,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
+
           echo "=========================================="
           echo "Triggering Terraform CD"
           echo "=========================================="
 
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: main"
+          echo "Workflow: terraform-cd.yml"
+
           gh workflow run terraform-cd.yml \
-            --repo swapnilagarwal30/azure-resources-repo \
+            --repo "${{ github.repository }}" \
             --ref main
 
           echo "Terraform CD workflow triggered successfully."
