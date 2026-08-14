@@ -241,7 +241,7 @@ jobs:
           echo "Merging Pull Request"
           echo "=========================================="
 
-          echo "PR #${PR_NUMBER} was approved by virukhatri."
+          echo "PR #${PR_NUMBER} was approved by swapnilagarwal30."
 
           gh pr merge "$PR_NUMBER" \
             --repo "${{ github.repository }}" \
