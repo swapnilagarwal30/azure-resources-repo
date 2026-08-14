@@ -96,7 +96,7 @@ jobs:
 
       - name: Create Pull Request
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           BRANCH_NAME="${GITHUB_REF_NAME}"
 
@@ -115,10 +115,10 @@ jobs:
 
             echo "Pull Request #${EXISTING_PR} already exists."
 
-            echo "Requesting review from virukhatri..."
+            echo "Requesting review from prakash-vcare..."
 
             gh pr edit "$EXISTING_PR" \
-              --add-reviewer "virukhatri"
+              --add-reviewer "prakash-vcare"
 
             echo "Review requested successfully."
 
@@ -149,7 +149,7 @@ jobs:
 
           ### Required Reviewer
 
-          @virukhatri
+          @prakash-vcare
           EOF
           )
 
@@ -168,10 +168,10 @@ jobs:
 
             echo "Pull Request Number: ${PR_NUMBER}"
 
-            echo "Requesting review from virukhatri..."
+            echo "Requesting review from prakash-vcare..."
 
             gh pr edit "$PR_NUMBER" \
-              --add-reviewer "virukhatri"
+              --add-reviewer "prakash-vcare"
 
             echo "Review requested successfully."
 
@@ -185,7 +185,7 @@ jobs:
   merge-approved-pr:
     name: Merge Approved PR
 
-    if: github.event_name == 'pull_request_review' && github.event.action == 'submitted' && github.event.review.state == 'approved' && github.event.review.user.login == 'virukhatri' && github.event.pull_request.base.ref == 'main'
+    if: github.event_name == 'pull_request_review' && github.event.action == 'submitted' && github.event.review.state == 'approved' && github.event.review.user.login == 'prakash-vcare' && github.event.pull_request.base.ref == 'main'
 
     runs-on: ubuntu-latest
 
@@ -214,8 +214,8 @@ jobs:
           echo "Reviewer: ${{ github.event.review.user.login }}"
           echo "Review State: ${{ github.event.review.state }}"
 
-          if [ "${{ github.event.review.user.login }}" != "virukhatri" ]; then
-            echo "ERROR: Pull Request was not approved by virukhatri."
+          if [ "${{ github.event.review.user.login }}" != "prakash-vcare" ]; then
+            echo "ERROR: Pull Request was not approved by prakash-vcare."
             exit 1
           fi
 
@@ -224,7 +224,7 @@ jobs:
             exit 1
           fi
 
-          echo "Pull Request approved by virukhatri."
+          echo "Pull Request approved by prakash-vcare."
 
 
       # --------------------------------------------------------
@@ -233,7 +233,7 @@ jobs:
 
       - name: Merge Approved PR
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           PR_NUMBER="${{ github.event.pull_request.number }}"
 
@@ -241,9 +241,10 @@ jobs:
           echo "Merging Pull Request"
           echo "=========================================="
 
-          echo "PR #${PR_NUMBER} has been approved by virukhatri."
+          echo "PR #${PR_NUMBER} was approved by prakash-vcare."
 
           gh pr merge "$PR_NUMBER" \
+            --repo "${{ github.repository }}" \
             --squash \
             --delete-branch
 
@@ -263,7 +264,7 @@ jobs:
           echo "=========================================="
 
           gh workflow run terraform-cd.yml \
-            --repo swapnilagarwal30/azure-resources-repo \
+            --repo prakash-vcare/azure-resources-repo \
             --ref main
 
           echo "Terraform CD workflow triggered successfully."
