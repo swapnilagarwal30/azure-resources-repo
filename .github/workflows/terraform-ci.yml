@@ -106,17 +106,27 @@ jobs:
           echo "Checking for existing Pull Request"
           echo "=========================================="
 
-          EXISTING_PR=$(gh pr list             --repo "${{ github.repository }}"             --head "$BRANCH_NAME"             --base main             --state open             --json number             --jq '.[0].number')
+          EXISTING_PR=$(gh pr list \
+            --repo "${{ github.repository }}" \
+            --head "$BRANCH_NAME" \
+            --base main \
+            --state open \
+            --json number \
+            --jq '.[0].number')
 
           if [ -n "$EXISTING_PR" ]; then
 
             echo "Pull Request #${EXISTING_PR} already exists."
 
             echo "Requesting review from satishmali100..."
-            gh pr edit "$EXISTING_PR"               --repo "${{ github.repository }}"               --add-reviewer "satishmali100"
+            gh pr edit "$EXISTING_PR" \
+              --repo "${{ github.repository }}" \
+              --add-reviewer "satishmali100"
 
             echo "Requesting review from prakash-vcare..."
-            gh pr edit "$EXISTING_PR"               --repo "${{ github.repository }}"               --add-reviewer "prakash-vcare"
+            gh pr edit "$EXISTING_PR" \
+              --repo "${{ github.repository }}" \
+              --add-reviewer "prakash-vcare"
 
             echo "Review requests updated successfully."
 
@@ -152,20 +162,32 @@ jobs:
           EOF
           )
 
-            PR_URL=$(gh pr create               --repo "${{ github.repository }}"               --base main               --head "$BRANCH_NAME"               --title "Terraform: ${BRANCH_NAME} -> main"               --body "$PR_BODY")
+            PR_URL=$(gh pr create \
+              --repo "${{ github.repository }}" \
+              --base main \
+              --head "$BRANCH_NAME" \
+              --title "Terraform: ${BRANCH_NAME} -> main" \
+              --body "$PR_BODY")
 
             echo "Pull Request created:"
             echo "$PR_URL"
 
-            PR_NUMBER=$(gh pr view "$PR_URL"               --repo "${{ github.repository }}"               --json number               --jq '.number')
+            PR_NUMBER=$(gh pr view "$PR_URL" \
+              --repo "${{ github.repository }}" \
+              --json number \
+              --jq '.number')
 
             echo "Pull Request Number: ${PR_NUMBER}"
 
             echo "Requesting review from satishmali100..."
-            gh pr edit "$PR_NUMBER"               --repo "${{ github.repository }}"               --add-reviewer "satishmali100"
+            gh pr edit "$PR_NUMBER" \
+              --repo "${{ github.repository }}" \
+              --add-reviewer "satishmali100"
 
             echo "Requesting review from prakash-vcare..."
-            gh pr edit "$PR_NUMBER"               --repo "${{ github.repository }}"               --add-reviewer "prakash-vcare"
+            gh pr edit "$PR_NUMBER" \
+              --repo "${{ github.repository }}" \
+              --add-reviewer "prakash-vcare"
 
             echo "Review requests sent successfully."
 
@@ -222,7 +244,8 @@ jobs:
             exit 1
           fi
 
-          if [ "${{ github.event.review.user.login }}" != "satishmali100" ] &&              [ "${{ github.event.review.user.login }}" != "prakash-vcare" ]; then
+          if [ "${{ github.event.review.user.login }}" != "satishmali100" ] && \
+             [ "${{ github.event.review.user.login }}" != "prakash-vcare" ]; then
             echo "ERROR: Unauthorized reviewer."
             exit 1
           fi
@@ -249,7 +272,10 @@ jobs:
           echo "PR #${PR_NUMBER}"
           echo "Approved by: ${{ github.event.review.user.login }}"
 
-          gh pr merge "$PR_NUMBER"             --repo "${{ github.repository }}"             --squash             --delete-branch
+          gh pr merge "$PR_NUMBER" \
+            --repo "${{ github.repository }}" \
+            --squash \
+            --delete-branch
 
           echo "Pull Request merged successfully."
 
@@ -272,7 +298,10 @@ jobs:
 
           for i in {1..10}; do
 
-            MERGED=$(gh pr view "$PR_NUMBER"               --repo "${{ github.repository }}"               --json merged               --jq '.merged')
+            MERGED=$(gh pr view "$PR_NUMBER" \
+              --repo "${{ github.repository }}" \
+              --json merged \
+              --jq '.merged')
 
             if [ "$MERGED" = "true" ]; then
               echo "PR #${PR_NUMBER} has been merged."
@@ -306,6 +335,8 @@ jobs:
           echo "Branch: main"
           echo "Workflow: terraform-cd.yml"
 
-          gh workflow run terraform-cd.yml             --repo "${{ github.repository }}"             --ref main
+          gh workflow run terraform-cd.yml \
+            --repo "${{ github.repository }}" \
+            --ref main
 
           echo "Terraform CD workflow triggered successfully."

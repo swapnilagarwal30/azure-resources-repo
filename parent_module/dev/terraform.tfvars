@@ -60,7 +60,6 @@ nicvar = {
     rg_name     = "rg-kindled"
     vnet_name   = "vnet-dev"
     subnet_name = "frontend-subnet"
-    pip_name    = "frontend-pip"
   }
   nic2 = {
     nic_name    = "backend-nic"
@@ -68,7 +67,6 @@ nicvar = {
     rg_name     = "rg-kindled"
     vnet_name   = "vnet-dev"
     subnet_name = "backend-subnet"
-    pip_name    = "backend-pip"
   }
 }
 linuxvm_var = {
